@@ -1,0 +1,19 @@
+<div class="item color-picker-input"
+    ng-class="{'item-icon-left': cpi.inputIcon}"
+    ng-click="cpi.launchColorPicker()"
+    md-ink-ripple
+>
+    <i class="icon zmdi zmdi-eyedropper" ng-if="cpi.inputIcon"></i>
+    <div class="spacer"></div>
+    <label ng-if="!cpi.hasColors">
+        Choose colors
+    </label>
+    <span
+        class="color-handle"
+        style="background-color:{{idx}}"
+        ng-if="cpi.hasColors"
+        ng-repeat="(idx, color) in cpi.inputColors"
+        ng-class="{'remove-color' : !cpi.inputColors[idx]}"
+    >
+    </span>
+</div>

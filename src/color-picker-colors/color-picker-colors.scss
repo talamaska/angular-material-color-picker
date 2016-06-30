@@ -1,0 +1,60 @@
+.color-checkbox-list {
+    opacity: 0;
+    animation-name: fadein;
+    animation-duration: 500ms;
+    animation-fill-mode: forwards;
+    animation-direction: normal;
+    animation-iteration-count: 1;
+    animation-timing-function: cubic-bezier(0.62, 0.28, 0.23, 0.99);
+
+    .checkbox-wrapper {
+        float: left;
+        padding: 3px;
+
+        input[type='checkbox'] {
+            display: none;
+
+            + label {
+                transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            &:checked + label {
+                @include z-depth(2);
+
+                &:before {
+                    content: '\f26b';
+                    color: $light;
+                    text-shadow: 0 0 3px $primary-text, 0 0 3px	$primary-text, 0 0 3px $primary-text;
+                    width: 48px;
+                    height: 48px;
+                    float: left;
+                    text-align:	center;
+                    font: normal normal	normal 32px/47px 'Material-Design-Iconic-Font';
+                }
+            }
+        }
+
+        .color-checkbox	{
+            appearance:	none;
+            background-color: $light;
+            border:	none;
+            padding: 0;
+            display: inline-block;
+            position: relative;
+            width: 48px;
+            height: 48px;
+            border-radius: $border-radius-small;
+            float: left;
+        }
+    }
+}
+
+@keyframes fadein {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
