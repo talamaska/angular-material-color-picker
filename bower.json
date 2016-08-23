@@ -1,23 +1,11 @@
 {
-  "name": "HelloIonic",
-  "private": "true",
-  "devDependencies": {
-    "ionic": "driftyco/ionic-bower#1.2.0"
-  },
-  "dependencies": {
-    "ionic-filter-bar": "~1.1.1",
-    "ionic-toast": "~0.2.0",
-    "material-design-iconic-font": "~2.2.0",
-    "material-shadows": "~2.0.2",
-    "ngCordova": "~0.1.23-alpha",
-    "roboto-fontface": "~0.4.3",
-    "vibrant": "*",
-    "angular-messages": "1.4.3"
-  },
-  "resolutions": {
-    "angular": "1.4.3",
-    "angular-animate": "1.4.3",
-    "angular-sanitize": "1.4.3",
-    "ionic": "1.2.0"
-  }
+  "name": "angular-radial-color-picker",
+  "homepage": "https://github.com/talamaska/angular-radial-color-picker",
+  "authors": [
+    "zlati.pehlivanov@gmail.com"
+  ],
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "private": true
 }

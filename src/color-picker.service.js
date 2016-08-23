@@ -1,142 +1,228 @@
 (function() {
     'use strict';
 
+    /**
+     * @ngdoc service
+     * @namespace Utilities
+     * @name ColorPickerService
+     * @module color.picker.core
+     * @requires $rootScope
+     *
+     * @description
+     * API for intercomponent comunication and color model conversions.
+     *
+     * @example
+     * // Convert RGB color model to hexadecimal string
+     * ColorPickerService.rgbToHex(255, 0, 0); // returns 'FF0000'
+     */
     angular
-        .module('color.picker.service', [])
-        .service('ColorPickerSrv', ColorPickerSrv);
+        .module('color.picker.core')
+        .service('ColorPickerService', ColorPickerService);
 
     /* @ngInject */
-    function ColorPickerSrv($q) {
-        var instance = null;
-        this.canvas = null;
-        this.imageData = null;
-        this.ctx = null;
-        this.getColor = getColor;
-        this.getCanvas = getCanvas;
-        this.getImageData = getImageData;
-        this.getCanvasData  = getCanvasData;
-        this.renderColorCanvas = renderColorCanvas;
-        this.coefficient = 0.77;
-        this.getCanvasThickness = getCanvasThickness;
-        this.hasColorMap = false;
-        var that = this;
+    function ColorPickerService($rootScope) {
+        this.publish = publish;
+        this.subscribe = subscribe;
+        this.unsubscribe = unsubscribe;
 
-        function getCanvasThickness() {
-            return that.diameter / 2 - (that.diameter / 2) * that.coefficient;
+        this.getHueFromRgb = getHueFromRgb;
+        this.rgbToHex = rgbToHex;
+        this.hslToRgb = hslToRgb;
+        this.hslToHex = hslToHex;
+        this.rgbToHsl = rgbToHsl;
+
+        var subscribers = [];
+        var eventPrefix = 'color-picker.'
+
+        /**
+         * Broadcasts an event on the whole app. Uses $rootScope as an event bus
+         * so that sibling components can catch the event also. $applyAsync is used
+         * to make sure that the broadcast happens on the earliest next digest cycle.
+         *
+         * @memberOf Utilities
+         *
+         * @param  {string} eventName Sub-topic to broadcast
+         * @param  {*}      [data]    Any type of payload to broadcast
+         *
+         * @return {void}
+         */
+        function publish(eventName, data) {
+            $rootScope.$applyAsync(function() {
+                // queue up the broadcast in the next digest
+                $rootScope.$broadcast(eventPrefix + eventName, data);
+            });
         }
 
-        function getImageData() {
-            if (that.imageData !== null) {
-                console.log('we have the image data');
-                return that.imageData;
+        /**
+         * Facade wrapper for outside world interaction via $rootScope events.
+         *
+         * @memberOf Utilities
+         *
+         * @param  {string}   eventName Sub-topic to listen for. Can be 'open' or 'close'
+         * @param  {Function} callback  Function to invoke when event gets fired
+         *
+         * @return {Function}           Unsubscribe function for manual unsubscribtion.
+         */
+        function subscribe(eventName, callback) {
+            var unsubToken = $rootScope.$on(eventPrefix + eventName, callback);
+
+            subscribers.push(unsubToken);
+
+            return unsubToken;
+        }
+
+        /**
+         * Removes all event listeners setup with the `.subscribe()` method
+         *
+         * @memberOf Utilities
+         *
+         * @param  {string}   eventName Sub-topic to listen for. Can be 'open' or 'close'
+         * @param  {Function} callback  Function to invoke when event gets fired
+         *
+         * @return {void}
+         */
+        function unsubscribe() {
+            subscribers.forEach(function(unsubscribe) {
+                unsubscribe();
+            });
+        }
+
+        /**
+         * Gets hue angle from provided RGB values.
+         * For a full RGB to HSL conversion use `rgbToHsl` method instead.
+         *
+         * Formula: https://en.wikipedia.org/wiki/Hue#Computing_hue_from_RGB
+         *
+         * @memberOf Utilities
+         *
+         * @param  {number} r Integer between 0 and 255
+         * @param  {number} g Integer between 0 and 255
+         * @param  {number} b Interger between 0 and 255
+         *
+         * @return {angle}    The hue angle in degrees
+         */
+        function getHueFromRgb(r, g, b) {
+            return Math.atan2(1.732 * (g - b), 2 * r - g - b) * 57.295779513;
+        }
+
+        /**
+         * Converts RGB color model to hexadecimal string.
+         *
+         * @memberOf Utilities
+         *
+         * @param  {number} r Integer between 0 and 255
+         * @param  {number} g Integer between 0 and 255
+         * @param  {number} b Integer between 0 and 255
+         *
+         * @return {string}   6 char long hex string
+         */
+        function rgbToHex(r, g, b) {
+            return ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        /**
+         * Converts HSL color model to hexademical string.
+         *
+         * @memberOf Utilities
+         *
+         * @param  {number} r Integer between 0 and 255
+         * @param  {number} g Integer between 0 and 255
+         * @param  {number} b Integer between 0 and 255
+         *
+         * @return {string}   6 char long hex string
+         */
+        function hslToHex(h, s, l) {
+            var colorModel = hslToRgb(h, s, l);
+
+            return rgbToHex(colorModel.red, colorModel.green, colorModel.blue);
+        }
+
+        /**
+         * Converts HSL color model to RGB model.
+         * Shamelessly taken from http://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c
+         *
+         * @memberOf Utilities
+         *
+         * @param   {number} h The hue. Number in the 0-360 range
+         * @param   {number} s The saturation. Number in the 0-100 range
+         * @param   {number} l The luminosity. Number in the 0-100 range
+         *
+         * @return  {Object}   The RGB representation containing the red, green and blue fields
+         */
+        function hslToRgb(h, s, l) {
+            var r, g, b;
+
+            h = h / 360;
+            s = s / 100;
+            l = l / 100;
+
+            if (s === 0) {
+                r = g = b = l; // achromatic
             } else {
-                console.log('we dont have the image data, get it');
-                return getCanvasData();
+                var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                var p = 2 * l - q;
+
+                r = _hue2rgb(p, q, h + 1/3);
+                g = _hue2rgb(p, q, h);
+                b = _hue2rgb(p, q, h - 1/3);
             }
-        }
 
-        function getCanvasData() {
-            console.log('get the image data');
-            that.imageData = that.canvas.toDataURL();
-            return that.imageData;
-        }
-
-        function getCanvas(diameter) {
-            if (that.canvas !== null) {
-                console.log('we have canvas, return the instance');
-                return that;
-            } else {
-                console.log('we dont have canvas, init');
-                initCanvas(diameter);
-                console.log('return instance');
-                return that;
-            }
-        }
-
-        function getColor(x, y) {
-            var color = that.ctx.getImageData(x, y, 1, 1).data;
             return {
-                red: color[0],
-                green: color[1],
-                blue: color[2]
+                red: Math.round(r * 255),
+                green: Math.round(g * 255),
+                blue: Math.round(b * 255)
             };
         }
 
-        function initCanvas(diameter) {
-            var canvas = document.createElement('canvas');
-            canvas.height = diameter;
-            canvas.width = diameter;
-            that.canvas = canvas;
-            that.ctx = canvas.getContext('2d');
-            that.ctx.imageSmoothingEnabled = true;
-            that.diameter = diameter;
+        function _hue2rgb(p, q, t) {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+
+            return p;
         }
 
-        function getColorMap(diameter) {
-            var def = $q.defer();
-            if (!that.hasColorMap) {
-                renderColorMap(diameter)
-                .then(function() {
-                    def.resolve();
-                });
+        /**
+         * Converts RGB color model to HSL model.
+         *
+         * @memberOf Utilities
+         *
+         * @param   {number} r Integer between 0 and 255
+         * @param   {number} g Integer between 0 and 255
+         * @param   {number} b Integer between 0 and 255
+         *
+         * @return  {Object}   The HSL representation containing the hue (in degrees),
+         *                     saturation (in percentage) and luminosity (in percentage) fields.
+         */
+        function rgbToHsl(r, g, b) {
+            r = r / 255;
+            g = g / 255;
+            b = b / 255;
+
+            var h, s;
+            var max = Math.max(r, g, b);
+            var min = Math.min(r, g, b);
+            var l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                var d = max - min;
+
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+                if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                if (max === g) h = (b - r) / d + 2;
+                if (max === b) h = (r - g) / d + 4;
             }
 
-            def.resolve();
-            return def.promise;
-        }
-
-        function renderColorMap(diameter) {
-            var def = $q.defer();
-            var radius = diameter / 2;
-            var toRad = (2 * Math.PI) / 360;
-            var step = 0.2;
-            var aliasing = 1;
-
-            var ctx = that.ctx;
-            ctx.clearRect(0, 0, diameter, diameter);
-            for (var i = 0; i < 360; i += step) {
-                var sRad = (i - aliasing) * toRad;
-                var eRad = (i + step) * toRad;
-                ctx.beginPath();
-                ctx.arc(radius, radius, radius / 2, sRad, eRad, false);
-                ctx.strokeStyle = 'hsl(' + i + ', 100%, 50%)';
-                ctx.lineWidth = radius;
-                ctx.closePath();
-                ctx.stroke();
-
-                //console.log(i);
-            }
-
-            ctx.fillStyle = 'rgb(255, 255, 255)';
-            ctx.beginPath();
-            ctx.arc(radius, radius, radius * that.coefficient, 0, Math.PI * 2, true);
-            ctx.closePath();
-            ctx.fill();
-
-            //console.log('internal circle');
-            ctx.strokeStyle = 'rgb(255, 255, 255)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(radius, radius, radius, 0, 2 * Math.PI);
-            ctx.stroke();
-
-            //console.log('external circle');
-
-            that.hasColorMap = true;
-            def.resolve();
-
-            return def.promise;
-        }
-
-        function renderColorCanvas(diameter) {
-            var def = $q.defer();
-
-            getColorMap(diameter)
-            .then(function() {
-                def.resolve();
-            });
-
-            return def.promise;
+            return {
+                hue: h * 60,
+                saturation: s * 100,
+                luminosity: l * 100
+            };
         }
     }
 })();
